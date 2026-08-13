@@ -1,0 +1,109 @@
+const Payout = require('../models/Payout');
+const User = require('../models/User');
+
+/**
+ * UK tax year runs 6 April - 5 April (not the calendar year).
+ * Given any date, returns the start/end boundaries of the tax year
+ * that date falls within.
+ */
+const getUKTaxYearBounds = (referenceDate = new Date()) => {
+  const year = referenceDate.getFullYear();
+  const aprilFifthThisYear = new Date(year, 3, 5, 23, 59, 59); // April is month index 3
+
+  const taxYearStart =
+    referenceDate <= aprilFifthThisYear
+      ? new Date(year - 1, 3, 6)
+      : new Date(year, 3, 6);
+  const taxYearEnd = new Date(taxYearStart.getFullYear() + 1, 3, 5, 23, 59, 59);
+
+  return { taxYearStart, taxYearEnd };
+};
+
+const formatTaxYearLabel = (taxYearStart) =>
+  `${taxYearStart.getFullYear()}/${(taxYearStart.getFullYear() + 1).toString().slice(-2)}`;
+
+/**
+ * Builds a per-seller earnings summary for a given UK tax year -
+ * total gross sales, platform fees deducted, and net paid out.
+ * This is a summary for the seller's own records, not a filed tax
+ * document - MatchPass does not submit anything to HMRC on a
+ * seller's behalf.
+ */
+const getSellerTaxSummary = async (sellerId, referenceDate = new Date()) => {
+  const { taxYearStart, taxYearEnd } = getUKTaxYearBounds(referenceDate);
+
+  const payouts = await Payout.find({
+    seller: sellerId,
+    status: 'paid',
+    releasedAt: { $gte: taxYearStart, $lte: taxYearEnd },
+  });
+
+  const totalNetPaid = payouts.reduce((sum, p) => sum + p.amount, 0);
+  const totalFeesDeducted = payouts.reduce((sum, p) => sum + (p.platformFeeDeducted || 0), 0);
+  const totalGross = totalNetPaid + totalFeesDeducted;
+
+  return {
+    taxYearLabel: formatTaxYearLabel(taxYearStart),
+    taxYearStart,
+    taxYearEnd,
+    totalGross: Math.round(totalGross * 100) / 100,
+    totalFeesDeducted: Math.round(totalFeesDeducted * 100) / 100,
+    totalNetPaid: Math.round(totalNetPaid * 100) / 100,
+    payoutCount: payouts.length,
+    payouts,
+  };
+};
+
+/**
+ * Admin-facing: every seller who received at least one payout in the
+ * given tax year, with their summary totals - used for bulk export /
+ * compliance review.
+ */
+const getAllSellersTaxSummary = async (referenceDate = new Date()) => {
+  const { taxYearStart, taxYearEnd } = getUKTaxYearBounds(referenceDate);
+
+  const payouts = await Payout.find({
+    status: 'paid',
+    releasedAt: { $gte: taxYearStart, $lte: taxYearEnd },
+  }).populate('seller', 'name email');
+
+  const bySeller = {};
+  for (const payout of payouts) {
+    if (!payout.seller) continue;
+    const sellerId = payout.seller._id.toString();
+    if (!bySeller[sellerId]) {
+      bySeller[sellerId] = {
+        sellerId,
+        sellerName: payout.seller.name,
+        sellerEmail: payout.seller.email,
+        totalNetPaid: 0,
+        totalFeesDeducted: 0,
+        payoutCount: 0,
+      };
+    }
+    bySeller[sellerId].totalNetPaid += payout.amount;
+    bySeller[sellerId].totalFeesDeducted += payout.platformFeeDeducted || 0;
+    bySeller[sellerId].payoutCount += 1;
+  }
+
+  const sellers = Object.values(bySeller).map((s) => ({
+    ...s,
+    totalNetPaid: Math.round(s.totalNetPaid * 100) / 100,
+    totalFeesDeducted: Math.round(s.totalFeesDeducted * 100) / 100,
+    totalGross: Math.round((s.totalNetPaid + s.totalFeesDeducted) * 100) / 100,
+  }));
+
+  return {
+    taxYearLabel: formatTaxYearLabel(taxYearStart),
+    taxYearStart,
+    taxYearEnd,
+    sellers: sellers.sort((a, b) => b.totalGross - a.totalGross),
+  };
+};
+
+module.exports = {
+  getUKTaxYearBounds,
+  formatTaxYearLabel,
+  getSellerTaxSummary,
+  getAllSellersTaxSummary,
+};

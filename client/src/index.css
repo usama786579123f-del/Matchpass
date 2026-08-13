@@ -1,0 +1,126 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-bg text-ink font-body antialiased;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-display text-ink;
+  }
+
+  /* Visible keyboard focus everywhere — accessibility floor */
+  :focus-visible {
+    outline: 2px solid theme('colors.primary.500');
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background-color: theme('colors.primary.100');
+    color: theme('colors.primary.900');
+  }
+}
+
+@layer components {
+  /* ---- Signature element: perforated ticket-stub divider ---- */
+  .ticket-stub-divider {
+    position: relative;
+    border-top: 2px dashed theme('colors.slate.200');
+  }
+  .ticket-stub-divider::before,
+  .ticket-stub-divider::after {
+    content: '';
+    position: absolute;
+    top: -10px;
+    width: 20px;
+    height: 20px;
+    background: theme('colors.bg.DEFAULT');
+    border-radius: 9999px;
+    border: 2px solid theme('colors.slate.100');
+  }
+  .ticket-stub-divider::before {
+    left: -10px;
+  }
+  .ticket-stub-divider::after {
+    right: -10px;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-primary-500 px-5 py-2.5
+           font-semibold text-white shadow-subtle transition-all duration-200
+           hover:bg-primary-600 hover:shadow-card active:scale-[0.98]
+           disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-2.5
+           font-semibold text-ink border border-slate-200 shadow-subtle transition-all duration-200
+           hover:border-slate-300 hover:shadow-card active:scale-[0.98]
+           disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5
+           font-semibold text-ink transition-all duration-200
+           hover:bg-slate-50 active:scale-[0.98]
+           disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .card {
+    @apply rounded-2xl bg-white border border-slate-100 shadow-card transition-shadow duration-200;
+  }
+
+  .card-hover {
+    @apply hover:shadow-elevated hover:-translate-y-0.5 transition-all duration-200;
+  }
+
+  .input-field {
+    @apply w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-ink
+           placeholder:text-slate-400 transition-colors duration-200
+           focus:border-primary-500 focus:outline-none focus:ring-4 focus:ring-primary-500/10;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold;
+  }
+
+  .badge-success {
+    @apply badge bg-primary-50 text-primary-700;
+  }
+
+  .badge-warning {
+    @apply badge bg-gold-50 text-gold-600;
+  }
+
+  .badge-danger {
+    @apply badge bg-red-50 text-danger;
+  }
+
+  .price-mono {
+    @apply font-mono font-semibold tabular-nums;
+  }
+}
+
+@layer utilities {
+  .container-page {
+    @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
+  }
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

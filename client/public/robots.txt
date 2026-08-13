@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /buyer/
+Disallow: /seller/
+Disallow: /admin/
+
+Sitemap: https://matchpass.com/sitemap.xml
